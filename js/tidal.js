@@ -7,10 +7,10 @@ var dailyEndTime = "";
 var criticalPathEndTime = "";
 var sysUnlockTime = "";
 
-function analize(){
+function analize($cloned){
 	var whiteList = [""];
 
-	var cloned = $('table').clone();
+	var cloned = $cloned;
 	var gridRows = $(cloned).find('.gridRow');
 	var rowsData = [];
 	var ignoredRows = [];
