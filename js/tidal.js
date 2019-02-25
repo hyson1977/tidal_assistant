@@ -27,22 +27,15 @@ function GM_addStyle(css) {
     style.appendChild(document.createTextNode(css));
 }
 
-console.debug('start: add CSS');
 GM.xmlHttpRequest({
     method: "GET",
     url: "https://raw.githubusercontent.com/rawbenny/tidal_assistant/master/css/style.css?" + Math.random(),
     onload: function(response) {
         var css = response.responseText;
         GM_addStyle(css);
-        console.debug('done: add ' + css);
     }
 });
 
-(async function() {
-    let img = document.createElement("img");
-    //img.src = await GM.getResourceUrl("logo");
-    //document.body.appendChild(img);
-})();
 
 (function() {
     'use strict';
