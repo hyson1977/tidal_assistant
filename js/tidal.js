@@ -5,7 +5,6 @@
 // @description  try to take over the world!
 // @author       You
 // @match        http://gvltidwp1.btoins.ibm.com:8080/client/console.html?locale=en
-// @resource     jqUI_CSS https://github.com/rawbenny/tidal_assistant/blob/master/css/style.css
 // @require     http://ajax.googleapis.com/ajax/libs/jquery/2.1.0/jquery.min.js
 // @require     https://gist.github.com/raw/2625891/waitForKeyElements.js
 // @grant        GM.xmlHttpRequest
@@ -20,42 +19,36 @@ function GM_addStyle(css) {
         document.head.appendChild(style);
         return style;
     })();
-    const sheet = style.sheet;
-    console.log(style);
-    console.log(style.styleSheet);
-    //sheet.insertRule(css, (sheet.rules || sheet.cssRules || []).length);
     style.appendChild(document.createTextNode(css));
 }
-
-GM.xmlHttpRequest({
-    method: "GET",
-    url: "https://raw.githubusercontent.com/rawbenny/tidal_assistant/master/css/style.css?" + Math.random(),
-    onload: function(response) {
-        var css = response.responseText;
-        GM_addStyle(css);
-    }
-});
-
 
 (function() {
     'use strict';
 
     // Your code here...
-    var _btn = "<button id='tamper_btn'  style='position:absolute;top:0;'>Analize</button>";
+    var _btn = "<button id='tamper_btn'  style='position:absolute;top:0;'>Analyze</button>";
 
     var appendBtn = function(){
         $('body').append(_btn);
         $('#tamper_btn').on('click',btnClick);
+		GM.xmlHttpRequest({
+		    method: "GET",
+		    url: "https://raw.githubusercontent.com/rawbenny/tidal_assistant/master/css/style.css?" + Math.random(),
+		    onload: function(response) {
+		        var css = response.responseText;
+		        GM_addStyle(css);
+		    }
+		});        
     };
     var btnClick = function(){
         var _iframe = document.querySelector('iframe.gwt-Frame.frame');
         var _doc = _iframe && _iframe.contentDocument;
         var rows = _doc.querySelectorAll(".grid-JobRun.grid");
-        analize($(rows).find('table').clone());
-        console.log(rows);
+        analyze($(rows).find('table').clone());
     };
 
     var blackListPtns = [/Interface_ADAMImage/,/Interface_ADAMIndex/,];
+    var cycleName = "";
     var cycleStatus = "";
     var cycleStartTime = "";
     var cycleEndTime = "";
@@ -65,7 +58,7 @@ GM.xmlHttpRequest({
     var sysUnlockTime = "";
     var whiteList = [""];
 
-    function analize($cloned){
+    function analyze($cloned){
         var gridRows = $cloned.find('.gridRow');
         if(gridRows.length > 200){
             alert("Please filter the grid and try again.");
@@ -80,11 +73,19 @@ GM.xmlHttpRequest({
             var actEnd = $(elem).find('.gridContent.col-12').text();
             var reRuns = $(elem).find('.gridContent.col-7').text();
             var reRunsNum = parseInt(reRuns);
-            if(name.match(/^PNXModel-ProjA/) || name.match(/^PNXDev-ProjA$/)){
+            if(name.match(/^PNXModel-ProjA/)){
+                cycleName = "PNXModel";
                 cycleStatus = status;
                 cycleStartTime = actStart;
                 cycleEndTime = actEnd;
-            } else if(name == "PNXModel_Daily (1)"|| name == "PNXDev_Daily (1)"){
+            }else if(name.match(/^PNXDevA.*ProjA.{4}$/)){
+                cycleName = "PNXDev";
+                cycleStatus = status;
+                cycleStartTime = actStart;
+                cycleEndTime = actEnd;
+            }
+
+            if(name == "PNXModel_Daily (1)"|| name == "PNXDev_Daily (1)"){
                 dailyStartTime = actStart;
                 dailyEndTime = actEnd;
             } else if(name.match(/Daily_CriticalPath/)){
@@ -104,7 +105,7 @@ GM.xmlHttpRequest({
 
         });
 
-        buildTable();
+        buildTable(watchedRows,ignoredRows);
         renderTable();
     }
 
@@ -117,31 +118,56 @@ GM.xmlHttpRequest({
         return false;
     }
 
-    function buildTable(){
+    function buildTable(watchedRows,ignoredRows){
 
-        var html = '<div id="modal" class="modalwindow"><h2>PNXDev Waiting On Children</h2><a href="#" class="close">X</a><div class="content"><table><tr><td>Cycle Started at</td><td id="cycleStartTime"></td></tr><tr><td>PNXDev_Daily Started at</td><td id="dailyStartTime"></td></tr><tr><td>PNXDev_Daily Finished at</td><td id="dailyEndTime"></td></tr><tr><td>Daily Critical Path Finished at</td><td id="criticalPathEndTime"></td></tr><tr><td>System Availability Unlocked and Available to All Users at</td><td id="sysUnlockTime"></td></tr><tr><td>PNXDev Completed at</td><td id="cycleEndTime"></td></tr></table></div></div>';
-
+        var html = '<div id="modal" class="modalwindow"><h2><span id="cycleName"></span>:<span id="cycleStatus"></span> </h2><a href="#" class="close">X</a><div class="content"><table><tr><td>Cycle Started at</td><td id="cycleStartTime"></td></tr><tr><td><span class="cycleName"></span>_Daily Started at</td><td id="dailyStartTime"></td></tr><tr><td><span class="cycleName"></span>_Daily Finished at</td><td id="dailyEndTime"></td></tr><tr><td>Daily Critical Path Finished at</td><td id="criticalPathEndTime"></td></tr><tr><td>System Availability Unlocked and Available to All Users at</td><td id="sysUnlockTime"></td></tr><tr><td><span class="cycleName"></span> Completed at</td><td id="cycleEndTime"></td></tr></table></div></div>';
         if($("#modal").length == 0){
             $(html).appendTo('body');
         }
         //if close button is clicked
         $('.modalwindow .close').click(function (e) {
-
             //Cancel the link behavior
             e.preventDefault();
             $('.modalwindow').fadeOut(500);
         });
 
+        $("#cycleName").text(cycleName);
+        $(".cycleName").text(cycleName);
+        $("#cycleStatus").text(cycleStatus);
         $("#cycleStartTime").text(cycleStartTime);
         $("#cycleEndTime").text(cycleEndTime);
         $("#dailyStartTime").text(dailyStartTime);
         $("#dailyEndTime").text(dailyEndTime);
         $("#criticalPathEndTime").text(criticalPathEndTime);
         $("#sysUnlockTime").text(sysUnlockTime);
+        $(".watchedRows").remove();
 
-        var output="PNXDev_Daily Started at\t\t\t:"+cycleStartTime;
-        output += "\nPNXDev_Daily Ended at\t\t\t"+cycleEndTime;
-        console.log(output);
+        if(watchedRows.length > 0){
+            var $watchedTable = $("<table><tr><td>Job</td><td>Status</td><td>Rerun</td></tr>",{class:"watchedRows"});
+            for(var i=0;i<watchedRows.length;i++){
+                var $td1=$("<td/>").text(watchedRows[i].name);
+                var $td2=$("<td/>").text(watchedRows[i].status);
+                var $td3=$("<td/>").text(watchedRows[i].reRuns);
+                var $tr=$("<tr/>").append($td1).append($td2).append($td3);
+                $watchedTable.append($tr);
+            }
+            $(".modalwindow .content").append('<h3 class="watchedRows">Report these jobs</h3>');
+            $(".modalwindow .content").append($watchedTable);  
+        }
+
+        $(".ignoredRows").remove();
+        if(ignoredRows.length > 0){
+            var $ignoredTable = $("<table><tr><td>Job</td><td>Status</td><td>Rerun</td></tr>",{class:"ignoredRows"});
+            for(var i=0;i<ignoredRows.length;i++){
+                var $td1=$("<td/>").text(ignoredRows[i].name);
+                var $td2=$("<td/>").text(ignoredRows[i].status);
+                var $td3=$("<td/>").text(ignoredRows[i].reRuns);
+                var $tr=$("<tr/>").append($td1).append($td2).append($td3);
+                $ignoredTable.append($tr);
+            }
+            $(".modalwindow .content").append('<h3 class="ignoredRows">Ignore these jobs</h3>');
+            $(".modalwindow .content").append($ignoredTable);  
+        }
     }
 
     function renderTable(){
